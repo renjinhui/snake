@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>canvas</title>
+	<style>
+		body{
+			overflow: hidden;
+		}
+		#canvas{
+			width: 800px;
+			margin: 50px;
+			border: 1px solid #ccc;
+			box-shadow: 2px 2px 3px 2px #ccc;
+
+		}
+	</style>
+</head>
+<body>
+	<canvas id='canvas' width="800" height="500">
+		您的浏览器不支持canvas,请升级您的浏览器
+	</canvas>
+</body>
+</html>
+<script type="text/javascript">
+	var canvas = document.getElementById('canvas');
+	var ctx = canvas.getContext('2d');
+
+	//设立一个构造函数；通过构造函数来创建方块
+	function Rect(x,y,w,h,color) {
+		this.x = x;
+		this.y = y;
+		this.w = w;
+		this.h = h;
+		this.color = color;
+    }
+    Rect.prototype.draw = function () {
+		ctx.beginPath();
+		ctx.fillStyle = this.color;
+		ctx.rect(this.x,this.y,this.w,this.h);
+		ctx.fill();//填充颜色
+		ctx.stroke();//画线
+    }
+
+    //在设立一个构造函数；通过构造函数来操纵蛇
+	function Snake() {
+		//蛇是由一个一个的小方块组成的；所以我们需要一个容器来存储这些小方块；
+		var snakeAry = [];
+		//在这里我们设置初始蛇由3个方块组成,蛇头设置成‘#f59958’
+		for(var i = 0; i < 3; i++){
+		    var rect = new Rect(i*20,0,20,20,'#56bced');
+		    //在这里我们王数组的前一项添加数据，就是后来添加的数据都在前边
+		    snakeAry.unshift(rect);
+		}
+		//我们把数组的第一项，也就是最后添加的一项作为蛇头，蛇头设置成其他颜色
+		snakeAry[0].color = '#f59958';
+		this.head = snakeAry[0];
+		this.snakeAry = snakeAry;
+		this.direction = 39;//39对应咱们键盘的右箭头健
+    }
+
+
+    //画蛇
+	Snake.prototype.draw = function () {
+		for(var i = 0; i < this.snakeAry.length; i++){
+		    this.snakeAry[i].draw();
+		}
+    };
+
+	//现在我们把蛇画出来了
+    // var s = new Snake();
+	// s.draw()
+
+
+	//接下来我们要移动蛇
+	Snake.prototype.move = function () {
+		//怎么移动蛇？
+		var rect = new Rect(this.head.x,this.head.y,this.head.w,this.head.h,'#56bced');
+		this.snakeAry.splice(1,0,rect);
+        // this.snakeAry.pop();
+        // this.head.x += this.head.w;
+		//我们要根据上下左右键来控制移动的方向
+		if(isEat()){
+		    //吃到之后 再去产生一个新的食物
+			food = createFood();
+		}else {
+            this.snakeAry.pop();
+		}
+		switch (this.direction){
+			case 37:
+			    this.head.x -= this.head.w;
+			    break;
+			case 38:
+			    this.head.y -= this.head.h;
+			    break;
+			case 39:
+			    this.head.x += this.head.w;
+			    break;
+			case 40:
+			    this.head.y += this.head.h;
+			    break;
+			default:
+			    break;
+		}
+
+		//接下来我们判定游戏结束
+		//1、撞墙
+		if(this.head.x >= canvas.width || this.head.x < 0 || this.head.y >= canvas.height || this.head.y < 0){
+		    window.clearInterval(timer);
+		}
+		//2、撞到自己（就是头部位置跟自己的身体的一个盒子的位置重合了）  ;  不用判断蛇头
+		for(var i = 1; i < this.snakeAry.length; i++){
+		    if(this.snakeAry[i].x == this.head.x && this.snakeAry[i].y == this.head.y){
+                window.clearInterval(timer);
+			}
+		}
+
+    };
+
+
+    var snake = new Snake();
+    snake.draw();
+    var food = createFood();
+    var timer = setInterval(function() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        snake.move();
+        snake.draw();
+        food.draw();
+    }, 100);
+
+    //我们要改变蛇的运动方向，需要监听到键盘的上下左右键的按下事件,r然后根据按键方向来决定舍得运动方向
+    document.onkeydown = function (e) {
+        switch (e.keyCode){
+            case 37:
+                //不能让他反向移动
+				if(snake.direction != 39){
+                    snake.direction = 37;
+				}
+                break;
+            case 38:
+                if(snake.direction != 40){
+                    snake.direction = 38;
+				}
+                break;
+            case 39:
+                if(snake.direction != 37){
+                    snake.direction = 39;
+				}
+                break;
+            case  40:
+                if(snake.direction != 38){
+                    snake.direction = 40;
+				}
+                break;
+            default:
+                break;
+        }
+    }
+
+
+    //我们还需要让蛇迟到食物
+	//设立一个创造食物的函数
+	function createFood() {
+		//食物盒子出现的位置是随机的，所以我们要找随机的位置来放置食物
+
+		//我们需要判定食物是否出现在了蛇的身上；如果出现在蛇身上，就重新产生一个
+		var isOn  = true;
+		while(isOn){
+		    isOn = false;
+            var x = randomState(0,canvas.width/20);
+            var y = randomState(0,canvas.height/20);
+            var rect = new Rect(x*20,y*20,20,20,'green');
+            for(var i = 0; i< snake.snakeAry.length;i++){
+                if(snake.snakeAry[i].x == rect.x && snake.snakeAry[i].y == rect.y){
+                    isOn = true;
+                    break;
+				}
+			}
+		}
+		return rect;
+    }
+
+    //产生随即位置的函数
+	function randomState(n,m) {
+		return Math.floor(Math.random()*(m-n)+n);
+    }
+
+
+    //蛇吃到食物的判断/   --->我们需要再蛇移动的时候判断是否吃到食物
+	function isEat() {
+		if(food.x == snake.head.x && food.y == snake.head.y){
+		    return true;
+		}else {
+		    return false;
+		}
+    }
+</script>
